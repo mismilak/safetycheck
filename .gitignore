@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+data/
+models/*.pt
+models/*.onnx
+models/*_openvino_model/
+training/dataset/
+training/runs/
+.pytest_cache/
+node_modules/

@@ -1,0 +1,15 @@
+services:
+  safetycheck:
+    build: .
+    restart: unless-stopped
+    ports: ["8000:8000"]
+    environment:
+      SC_ADMIN_PASSWORD: ${SC_ADMIN_PASSWORD:-}      # empty = random password printed in `docker compose logs`
+      SC_COOKIE_SECURE: ${SC_COOKIE_SECURE:-false}   # true when served over HTTPS
+      SC_DETECTOR: ${SC_DETECTOR:-auto}
+    volumes:
+      - ./data:/data
+      - ./models:/app/models
+    # IP/RTSP cameras work as-is. USB webcam passthrough works on Linux only:
+    # devices: ["/dev/video0:/dev/video0"]
+    # NVIDIA GPU (needs CUDA wheels in the image): deploy: {resources: {reservations: {devices: [{capabilities: [gpu]}]}}}
