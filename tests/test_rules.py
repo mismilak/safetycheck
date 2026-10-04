@@ -93,3 +93,27 @@ def test_class_name_mapping_for_common_ppe_datasets():
         assert canonical(name) == canon, name
     for other in ("Safety Cone", "Mask", "NO-Mask", "machinery", "vehicle"):
         assert canonical(other) is None
+
+
+def test_composite_detector_adds_people_to_ppe_only_model():
+    from app.vision.detector import CompositeDetector
+
+    class Fake:
+        def __init__(self, dets, caps, label):
+            self._d, self.caps, self.label = dets, caps, label
+        def detect(self, frame, conf, hint=None):
+            return list(self._d)
+        def info(self):
+            return {"mode": "ppe", "model": self.label, "caps": vars(self.caps), "classes": []}
+
+    ppe = Fake([HELMET, VEST], Capabilities(person=False, helmet=True, vest=True), "ppe.pt")
+    people = Fake([PERSON, Det("person", 0.8, (300, 100, 400, 400)), Det("helmet", 0.9, (0, 0, 5, 5))],
+                  Capabilities(), "yolo11n.pt")
+    comp = CompositeDetector(ppe, people)
+    dets = comp.detect(None, 0.4)
+    assert sorted(d.cls for d in dets) == ["helmet", "person", "person", "vest"]  # people's stray helmet dropped
+    assert comp.caps.person and comp.caps.helmet and comp.caps.vest
+    assert "ppe.pt" in comp.info()["model"] and "yolo11n.pt" in comp.info()["model"]
+    res = ComplianceEngine().process(dets, 480, 0.0, **KW)
+    states = {p.status for p in res.persons}
+    assert states == {"safe", "unsafe"}  # person 1 wears both, person 2 wears nothing

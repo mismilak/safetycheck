@@ -42,6 +42,23 @@ class YoloDetector:
         return {"mode": mode, "model": self.label, "caps": vars(self.caps), "classes": self.model_names}
 
 
+class CompositeDetector:
+    """PPE model without a `person` class (e.g. helmet/vest-only models) + a COCO model that finds people."""
+
+    def __init__(self, ppe: YoloDetector, people: YoloDetector):
+        self.ppe, self.people = ppe, people
+        self.caps = Capabilities(person=True, helmet=ppe.caps.helmet, vest=ppe.caps.vest)
+
+    def detect(self, frame, conf: float, hint=None) -> list[Det]:
+        out = [d for d in self.ppe.detect(frame, conf) if d.cls != "person"]
+        out += [d for d in self.people.detect(frame, conf) if d.cls == "person"]
+        return out
+
+    def info(self) -> dict:
+        i = self.ppe.info()
+        return {**i, "model": f"{self.ppe.label} + {self.people.label}", "person_from": self.people.label}
+
+
 class DemoDetector:
     """Returns the ground-truth boxes produced by DemoSource (UI/demo & tests; no real inference)."""
     caps = Capabilities(person=True, helmet=True, vest=True)
@@ -57,7 +74,7 @@ class DetectorManager:
     """Loads the model in a background thread so the web UI starts instantly."""
 
     def __init__(self):
-        self.detector: YoloDetector | None = None
+        self.detector: "YoloDetector | CompositeDetector | None" = None
         self.demo = DemoDetector()
         self.state = "loading"  # loading | ready | error
         self.error = ""
@@ -75,6 +92,10 @@ class DetectorManager:
             config.models_dir.mkdir(parents=True, exist_ok=True)
             if ppe.exists():
                 self.detector = YoloDetector(ppe, ppe.name)
+                if not self.detector.caps.person:
+                    log.warning("%s has no person class; using %s to find people", ppe.name, config.person_model)
+                    people = YoloDetector(config.models_dir / config.person_model, config.person_model)
+                    self.detector = CompositeDetector(self.detector, people)
             elif mode == "yolo":
                 raise FileNotFoundError(f"PPE model not found: {ppe}")
             else:
