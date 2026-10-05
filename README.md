@@ -34,6 +34,10 @@ python run.py
 - **بدون فایل مدل PPE:** برنامه فقط افراد را (با مدل عمومی `yolo11n`) می‌شمارد و وضعیت کلاه/لباس «نامشخص» است؛ **هیچ آلارم کاذبی ساخته نمی‌شود** و داشبورد هشدار می‌دهد.
 - **با مدل PPE:** فایل را در `models/ppe.pt` بگذارید. نام کلاس‌ها باید شامل `Hardhat` و `Safety Vest` باشد
   (و اختیاری `NO-Hardhat`، `NO-Safety Vest`، `Person`)؛ نام‌گذاری‌های رایج دیتاست‌های Roboflow/Kaggle پشتیبانی می‌شود.
+- **مدل آماده برای شروع سریع:** `python tools/download_ppe_model.py` (YOLOv8s با کلاس‌های Person / Hardhat / NO-Hardhat / Safety Vest / NO-Safety Vest؛
+  روی بخش test خودِ دیتاستش: تصمیم «کلاه دارد/ندارد» ≈ ۹۸٪ و «جلیقه دارد/ندارد» ≈ ۱۰۰٪ برای افراد پیداشده؛ روی دوربین شما ممکن است کمتر باشد).
+  اگر دانلود نشد، فایل `best.pt` را از [این مخزن](https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/tree/main/Model-Training/Outputs/runs/detect/yolov8s_ppe_css_200_epochs/weights) بگیرید و با نام `ppe.pt` در `models/` بگذارید.
+  مجوز دیتاست و مدل را قبل از استفاده تجاری بررسی کنید.
 - مدل PPE آماده داخل این مخزن **گنجانده نشده**. دو راه: (۱) آموزش مدل مخصوص محیط شما با `training/`
   (**توصیه‌شده**، راهنمای کامل در [`training/README.md`](training/README.md))، یا (۲) استفاده از یک مدل عمومی PPE با مجوز مناسب.
 
