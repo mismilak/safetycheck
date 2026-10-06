@@ -117,3 +117,11 @@ def test_composite_detector_adds_people_to_ppe_only_model():
     res = ComplianceEngine().process(dets, 480, 0.0, **KW)
     states = {p.status for p in res.persons}
     assert states == {"safe", "unsafe"}  # person 1 wears both, person 2 wears nothing
+
+
+def test_duplicate_upper_body_person_box_is_dropped():
+    full = Det("person", 0.86, (278, 542, 1133, 2000))
+    upper = Det("person", 0.51, (293, 543, 1109, 1112))  # same man, upper body only, IoU 0.37 -> NMS keeps both
+    other = Det("person", 0.8, (1300, 600, 1500, 1900))
+    res = ComplianceEngine().process([full, upper, other], 2000, 0.0, **KW)
+    assert len(res.persons) == 2

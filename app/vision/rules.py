@@ -107,6 +107,16 @@ def observe_ppe(person: Box, dets: list[Det], caps: Capabilities) -> tuple[float
             decide(best[VEST], best[NO_VEST], caps.vest))
 
 
+def dedupe_people(persons: list[Det], contain: float = 0.9) -> list[Det]:
+    """Drop a person box that lies (>= `contain` of its area) inside a more confident one: detectors often emit an extra
+    upper-body box for the same person whose IoU is too low for NMS to merge it, which would double-count and double-alarm."""
+    kept: list[Det] = []
+    for p in sorted(persons, key=lambda d: -d.conf):
+        if all(inside_fraction(p.box, k.box) < contain for k in kept):
+            kept.append(p)
+    return kept
+
+
 class ComplianceEngine:
     """One instance per camera."""
 
@@ -117,6 +127,7 @@ class ComplianceEngine:
                 require_vest: bool, violation_seconds: float, cooldown_seconds: float,
                 min_person_height: float = 0.0) -> FrameResult:
         persons = [d for d in dets if d.cls == PERSON and (d.box[3] - d.box[1]) >= min_person_height * frame_h]
+        persons = dedupe_people(persons)
         tracks = self.tracker.update([p.box for p in persons], now)
         res = FrameResult()
         for t in tracks:
