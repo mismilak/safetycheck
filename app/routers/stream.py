@@ -54,7 +54,7 @@ async def ws(websocket: WebSocket):
     q = hub.subscribe()
     rt = get_runtime()
     await websocket.send_text(json.dumps({"t": "hello", "cams": {
-        str(cid): {"online": w.online, "counts": w.counts, "persons": w.persons, "fps": round(w.fps, 1)}
+        str(cid): {"online": w.online, "counts": w.counts, "persons": w.persons, "fps": round(w.fps, 1), "stats": w.stats}
         for cid, w in rt.workers.items()}}))
 
     async def reader():

@@ -5,7 +5,7 @@ export async function mount(root) {
   let sel = Number(sessionStorage.getItem('sc-cam')) || cams[0]?.id;
   if (!cams.some((c) => c.id === sel)) sel = cams[0]?.id;
   const live = {}; // cam id -> {online, counts, persons, fps}
-  cams.forEach((c) => { live[c.id] = { online: c.online, counts: c.counts, persons: [], fps: c.fps }; });
+  cams.forEach((c) => { live[c.id] = { online: c.online, counts: c.counts, persons: [], fps: c.fps, stats: c.stats }; });
   let compliance = null, feed = [];
   const offs = [];
   let visible = true;
@@ -32,7 +32,7 @@ export async function mount(root) {
             <div class="tabs sp" id="camtabs" role="tablist">${cams.map((c) => html`<button class="tab ${c.id === sel ? 'active' : ''}" role="tab" data-cam="${c.id}"><span class="dot" data-d="${c.id}"></span> ${c.name}</button>`)}</div></div>
           <div class="video-wrap" id="vw">
             <img class="feed" id="feed" alt="تصویر زنده دوربین" decoding="async">
-            <div class="video-ov"><span class="pill" id="p-live"><span class="dot live"></span> زنده</span><span class="pill num" id="p-fps"></span><button class="pill sp" id="fs" style="pointer-events:auto;border:0;cursor:pointer;color:#fff" aria-label="تمام‌صفحه">${icon('maximize')}</button></div>
+            <div class="video-ov"><span class="pill" id="p-live"><span class="dot live"></span> زنده</span><span class="pill num" id="p-fps"></span><span class="pill num" id="p-ai" title="سرعت تشخیص هوشمند: تعداد تشخیص در ثانیه و زمان هر تشخیص"></span><button class="pill sp" id="fs" style="pointer-events:auto;border:0;cursor:pointer;color:#fff" aria-label="تمام‌صفحه">${icon('maximize')}</button></div>
             <div class="video-off" id="voff" hidden>${icon('wifi-off', 'xl')}<b>دوربین آفلاین است</b><span>اتصال دوربین یا منبع تصویر را بررسی کنید؛ سیستم به‌صورت خودکار دوباره تلاش می‌کند.</span></div>
           </div>
           <div class="legend"><span><i style="background:var(--safe)"></i>ایمن</span><span><i style="background:var(--warn)"></i>ناقص (یک مورد)</span><span><i style="background:var(--danger)"></i>ناایمن</span><span><i style="background:var(--muted)"></i>نامشخص</span>
@@ -73,6 +73,13 @@ export async function mount(root) {
     voff.hidden = !!l.online;
     $('#p-live', root).hidden = !l.online;
     $('#p-fps', root).textContent = l.online && l.fps ? `${fa1(l.fps)} fps` : '';
+    const st = l.stats, ai = $('#p-ai', root);
+    ai.hidden = !(l.online && st && st.infer_ms);
+    if (!ai.hidden) {
+      ai.textContent = `تشخیص ${fa1(st.infer_fps)}/ث · ${fa(Math.round(st.infer_ms))} میلی‌ثانیه`;
+      ai.style.background = st.infer_ms > 300 ? 'rgba(245,163,11,.85)' : '';
+      ai.style.color = st.infer_ms > 300 ? '#1a1204' : '';
+    }
     paintPeople(l.persons || []);
   }
   function paintKpi() {
@@ -120,7 +127,7 @@ export async function mount(root) {
   });
 
   offs.push(on('ws:hello', (m) => { Object.entries(m.cams).forEach(([id, v]) => { live[id] = { ...live[id], ...v }; }); paintKpi(); paintCam(); }));
-  offs.push(on('ws:live', (m) => { live[m.cam] = { online: m.online, counts: m.counts, persons: m.persons, fps: m.fps }; paintKpi(); if (m.cam === sel) paintCam(); }));
+  offs.push(on('ws:live', (m) => { live[m.cam] = { online: m.online, counts: m.counts, persons: m.persons, fps: m.fps, stats: m.stats }; paintKpi(); if (m.cam === sel) paintCam(); }));
   offs.push(on('ws:cam', (m) => { live[m.cam] = { ...(live[m.cam] || {}), online: m.online }; paintCam(); paintKpi(); }));
   offs.push(on('alarm:new', (a) => { feed.unshift(a); feed = feed.slice(0, 8); paintFeed(); $('#feed-list', root).firstElementChild?.classList.add('new-flash'); loadCompliance(); }));
   const poll = setInterval(() => { paintFeed(); loadCompliance(); paintWarn(); }, 30000);

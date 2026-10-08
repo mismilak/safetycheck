@@ -21,6 +21,8 @@ class Config(BaseSettings):
     person_model: str = "yolo11n.pt"
     device: str = "cpu"
     imgsz: int = 640
+    # FFmpeg options for rtsp:// sources: TCP avoids smeared/gray frames, nobuffer+low_delay avoid latency build-up.
+    rtsp_options: str = "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay"
     admin_username: str = "admin"
     admin_password: str = ""
 

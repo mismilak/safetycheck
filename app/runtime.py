@@ -156,8 +156,8 @@ class Runtime:
     def camera_status(self, cam_id: int) -> dict:
         w = self.workers.get(cam_id)
         if not w:
-            return {"online": False, "fps": 0, "counts": None}
-        return {"online": w.online, "fps": round(w.fps, 1), "counts": w.counts}
+            return {"online": False, "fps": 0, "counts": None, "stats": None}
+        return {"online": w.online, "fps": round(w.fps, 1), "counts": w.counts, "stats": w.stats}
 
 
 def alarm_files(a: Alarm) -> dict[str, "Path"]:  # noqa: F821

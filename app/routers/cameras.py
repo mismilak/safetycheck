@@ -26,7 +26,7 @@ def cam_json(c: Camera, user: User) -> dict:
     return {"id": c.id, "name": c.name, "location": c.location, "enabled": c.enabled,
             "require_helmet": c.require_helmet, "require_vest": c.require_vest,
             "source": c.source if full else mask(c.source), "online": st["online"], "fps": st["fps"],
-            "counts": st["counts"]}
+            "counts": st["counts"], "stats": st["stats"]}
 
 
 class CameraIn(BaseModel):

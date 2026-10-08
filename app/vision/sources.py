@@ -1,10 +1,13 @@
 import math
+import os
 import random
+import re
 import time
 
 import cv2
 import numpy as np
 
+from ..config import config
 from .types import Det
 
 DEMO_W, DEMO_H = 960, 540
@@ -17,6 +20,9 @@ def parse_source(src: str):
 
 def open_capture(src: str) -> cv2.VideoCapture:
     s = parse_source(src)
+    if isinstance(s, str) and re.match(r"^rtsps?://", s, re.I):
+        # read by OpenCV's FFmpeg backend when the capture is opened; a value already set by the user wins
+        os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", config.rtsp_options)
     cap = cv2.VideoCapture(s, cv2.CAP_ANY)
     if isinstance(s, int):
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
