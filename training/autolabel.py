@@ -26,6 +26,8 @@ from app.vision.rules import dedupe_people  # noqa: E402
 from app.vision.types import Det, canonical  # noqa: E402
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE))
+from _paths import resolve  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument("--source", required=True, help="video file, webcam index, RTSP url, or a folder of images")
 ap.add_argument("--uniform", required=True, choices=["yes", "no"], help="does EVERY person in this source wear the work uniform?")
@@ -41,6 +43,7 @@ ap.add_argument("--torso", type=float, nargs=2, default=(0.18, 0.62), metavar=("
 ap.add_argument("--device", default="cpu")
 a = ap.parse_args()
 
+a.model = str(resolve(a.model))
 if not Path(a.model).exists():
     sys.exit(f"model not found: {a.model}\nPut your PPE model at models/ppe.pt (python tools/download_ppe_model.py) or pass the path explicitly.")
 from ultralytics import YOLO  # noqa: E402
@@ -57,7 +60,7 @@ if miss:
     sys.exit(f"model {a.model} has no class for: {miss}. Use a PPE model with Person/Hardhat/NO-Hardhat/Safety Vest/NO-Safety Vest.")
 vest_cls = ids["vest"] if a.uniform == "yes" else ids["no_vest"]
 
-src = Path(a.source)
+src = resolve(a.source)
 if src.is_dir():
     files = sorted(p for p in src.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"})
 
@@ -68,7 +71,7 @@ if src.is_dir():
                 yield p.stem, im
     name = a.name or src.name
 else:
-    cap = cv2.VideoCapture(int(a.source) if a.source.isdigit() else a.source)
+    cap = cv2.VideoCapture(int(a.source) if a.source.isdigit() else str(src))
     if not cap.isOpened():
         sys.exit(f"cannot open {a.source!r}")
 

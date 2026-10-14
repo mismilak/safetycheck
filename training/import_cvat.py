@@ -23,6 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.vision.types import canonical  # noqa: E402
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE))
+from _paths import resolve  # noqa: E402
 IMG_EXT = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 ap = argparse.ArgumentParser()
 ap.add_argument("--src", required=True, help="the exported .zip, or the folder you extracted it to")
@@ -34,7 +36,7 @@ ap.add_argument("--images", help="folder with the original images, if the export
 ap.add_argument("--block", type=int, default=30, help="consecutive frames per block; whole blocks go to train OR val")
 a = ap.parse_args()
 
-src = Path(a.src)
+src = resolve(a.src)
 tmp = None
 if src.suffix.lower() == ".zip":
     tmp = tempfile.mkdtemp(prefix="cvat_")
@@ -48,6 +50,7 @@ if not names_files:
     sys.exit("obj.names not found - is this a CVAT 'YOLO 1.1' export?")
 cvat_names = [ln.strip() for ln in names_files[0].read_text(encoding="utf-8").splitlines() if ln.strip()]
 
+a.names_from = str(resolve(a.names_from))
 if not Path(a.names_from).exists():
     sys.exit(f"model not found: {a.names_from}\nPut your PPE model at models/ppe.pt (python tools/download_ppe_model.py) or pass the path explicitly.")
 from ultralytics import YOLO  # noqa: E402
@@ -77,7 +80,7 @@ for i, n in enumerate(cvat_names):
 # find label files (YOLO txt) and images
 images = {p.stem: p for p in root.rglob("*") if p.suffix.lower() in IMG_EXT}
 if a.images:
-    images.update({p.stem: p for p in Path(a.images).rglob("*") if p.suffix.lower() in IMG_EXT})
+    images.update({p.stem: p for p in resolve(a.images).rglob("*") if p.suffix.lower() in IMG_EXT})
 
 
 def is_label_file(p: Path) -> bool:
@@ -86,10 +89,13 @@ def is_label_file(p: Path) -> bool:
 
 
 labels = sorted(p for p in root.rglob("*.txt") if p.stem in images and is_label_file(p))
+n_txt = sum(1 for p in root.rglob("*.txt") if p.name.lower() not in ("train.txt", "valid.txt", "val.txt", "test.txt"))
 if not images:
-    sys.exit("The export contains no images. Export again with 'Save images' ticked, or pass --images <folder>.")
+    sys.exit(f"The export contains {n_txt} label files but NO images.\n"
+             "  In CVAT: Actions -> Export (task/job) dataset -> format 'YOLO 1.1' -> tick 'Save images' -> OK, then run this again.\n"
+             "  (If you labeled a folder of photos you still have, pass it instead: --images <folder>; file names must match.)")
 if not labels:
-    sys.exit("No label files matched an image (same file name). Check the export / --images folder.")
+    sys.exit(f"Found {len(images)} images but no label file with the same name. Check the export / --images folder.")
 
 out = Path(a.out)
 for sub in ("images", "labels"):

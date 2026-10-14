@@ -10,9 +10,12 @@ Images without a label file are skipped (label empty background images explicitl
 import argparse
 import random
 import shutil
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE))
+from _paths import resolve  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument("--src", required=True)
 ap.add_argument("--dst", default=str(HERE / "dataset"))
@@ -25,11 +28,18 @@ ap.add_argument("--group-by-source", action="store_true",
                      "avoids near-identical video frames leaking into validation")
 a = ap.parse_args()
 
-src, dst = Path(a.src), Path(a.dst)
+src, dst = resolve(a.src), Path(a.dst)
 imgs = sorted(p for p in (src / "images").glob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"})
 pairs = [(i, src / "labels" / f"{i.stem}.txt") for i in imgs if (src / "labels" / f"{i.stem}.txt").exists()]
 if not pairs:
-    raise SystemExit("no (image, label) pairs found")
+    n_img = len(imgs)
+    n_lab = len(list((src / "labels").glob("*.txt"))) if (src / "labels").exists() else 0
+    raise SystemExit(
+        f"no (image, label) pairs found in {src.resolve()}\n"
+        f"  looked for {src / 'images'} ({'exists' if (src / 'images').exists() else 'MISSING'}, {n_img} images) and "
+        f"{src / 'labels'} ({n_lab} label files) with matching file names.\n"
+        "  - did the previous step (import_cvat.py / autolabel.py) finish with 'imported/saved N frames'?\n"
+        "  - run commands from the project root, or give an absolute --src path.")
 rnd = random.Random(a.seed)
 if a.group_by_source:
     groups: dict[str, list] = {}
@@ -60,7 +70,7 @@ for split, items in (("val", pairs[:n_val]), ("train", pairs[n_val:])):
 yaml = (HERE / "data.yaml").read_text().replace("path: dataset", f"path: {dst.resolve()}")
 if a.names_from:
     from ultralytics import YOLO
-    nm = YOLO(a.names_from).names
+    nm = YOLO(str(resolve(a.names_from))).names
     yaml = yaml.split("names:")[0] + "names:\n" + "".join(f"  {k}: {v}\n" for k, v in nm.items())
 (dst / "data.yaml").write_text(yaml)
 
