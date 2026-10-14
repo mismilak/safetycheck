@@ -41,6 +41,8 @@ ap.add_argument("--torso", type=float, nargs=2, default=(0.18, 0.62), metavar=("
 ap.add_argument("--device", default="cpu")
 a = ap.parse_args()
 
+if not Path(a.model).exists():
+    sys.exit(f"model not found: {a.model}\nPut your PPE model at models/ppe.pt (python tools/download_ppe_model.py) or pass the path explicitly.")
 from ultralytics import YOLO  # noqa: E402
 
 model = YOLO(a.model)

@@ -64,7 +64,21 @@ python training/collect_frames.py --source rtsp://user:pass@192.168.1.20/stream1
 
 ## ۳) برچسب‌گذاری
 ابزارهای رایگان: [Label Studio](https://labelstud.io)، [CVAT](https://www.cvat.ai)، یا Roboflow.
-روی هر فرد/کلاه/لباس کادر بکشید و کلاس را بزنید. خروجی را با فرمت **YOLO** بگیرید:
+روی هر فرد/کلاه/لباس کادر بکشید و کلاس را بزنید.
+
+**اگر از CVAT استفاده می‌کنید:** نام برچسب‌ها را `Person`، `Hardhat`، `NO-Hardhat`، `Safety Vest`، `NO-Safety Vest` بگذارید.
+خروجی را با **Export task dataset ← YOLO 1.1** و تیک **Save images** بگیرید و با مبدل وارد کنید. مبدل شناسه‌های کلاس را
+بر اساس **نام** به شناسه‌های مدل شما نگاشت می‌کند (در CVAT ترتیب برچسب‌های شما ملاک است، نه مدل، و بدون نگاشت کلاس‌ها قاطی می‌شوند):
+```bash
+python training/import_cvat.py --src "job_..._yolo 1.1.zip"
+#  اگر نام برچسب شما غیراستاندارد بود (مثلاً uniform) در جدول چاپ‌شده «IGNORED» می‌بینید؛ با --map نگاشتش کنید:
+python training/import_cvat.py --src "job_..._yolo 1.1.zip" --map "uniform=Safety Vest"
+python training/prepare_dataset.py --src training/dataset/imported --names-from models/ppe.pt --group-by-source
+```
+اگر در CVAT فقط لباس را کادر زده‌اید و `Person` را نه، مبدل هشدار می‌دهد: افرادِ برچسب‌نخورده به‌عنوان پس‌زمینه یاد گرفته می‌شوند و
+مدل را بدتر می‌کنند. در آن حالت اول با `autolabel.py` فرد و کلاه را پیش‌برچسب بزنید و در CVAT فقط کم‌وکاست را اصلاح کنید.
+
+برای سایر ابزارها، خروجی را با فرمت **YOLO** بگیرید:
 
 ```
 export/
